@@ -14,11 +14,15 @@ with open('./openapi.json', mode='r', encoding='utf-8') as f:
     openapi: IOpenAPI = json.load(f)
 
     class Property:
-        def __init__(self, property: dict[str, str]) -> None:
+        def __init__(self, property: dict[str, str], required_inversion: bool=False) -> None:
             self.property = property
             self.property_type = property.keys()
+            self.property_required = property.get('required', [])
+            self.required_inversion = required_inversion
         
         def check_nullable(self, nullable: bool):
+            if self.required_inversion:
+                nullable = not nullable
             return '?' if nullable else ''
 
         def parse(self):
@@ -39,8 +43,10 @@ with open('./openapi.json', mode='r', encoding='utf-8') as f:
                 elif 'properties' in property_keys:
                     property_type = {}
                     for _property in property['properties']:
-                        _property_type = check_ref(property['properties'][_property])
-                        property_type[_property + _property_type[1]] = _property_type[0] if _property_type[0] not in ['array', 'either'] else 'any'
+                        _property_type, nullable = check_ref(property['properties'][_property])
+                        nullable = self.check_nullable(_property in self.property_required)
+                        print(nullable, _property)
+                        property_type[_property + nullable] = _property_type if _property_type not in ['array', 'either'] else 'any'
                     return property_type, self.check_nullable(property.get('nullable',False))
                 elif 'items' in property_keys:
                     return check_ref(property['items'], items=True)
@@ -96,7 +102,7 @@ interface {schema} {json.dumps(schemas[schema], ensure_ascii=False).replace('"',
                 content += 'params: ' + json.dumps({i['name']: i['schema']['type'] for i in parameters}, ensure_ascii=False).replace('"', '') + '\n'
             request_body = api.get('requestBody')
             if request_body:
-                request_type = Property(request_body['content']['application/json']['schema']).parse()
+                request_type = Property(request_body['content']['application/json']['schema'], request_body.get('required', False)).parse()
                 if len(request_type[0].keys()) > 0:
                     content += f'body: ' + json.dumps(request_type[0], ensure_ascii=False).replace('"', '') + '\n'
             
