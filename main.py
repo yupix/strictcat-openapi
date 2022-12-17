@@ -1,7 +1,13 @@
 import json
+import os
+from urllib import request
 from typing import Union
 
+from dotenv import load_dotenv
+
 from type import IOpenAPI
+
+load_dotenv()
 
 final_content = ''
 schemas = {}
@@ -20,9 +26,8 @@ def add_or_update(data: dict[str, dict], key: str, add_content: Union[dict, str]
 
 
 
-
-with open('./openapi.json', mode='r', encoding='utf-8') as f:
-    openapi: IOpenAPI = json.load(f)
+with request.urlopen(os.environ.get('OPENAPI_URL')) as res:
+    openapi: IOpenAPI = json.loads(res.read())
 
     class Property:
         def __init__(self, property: dict[str, str], required_inversion: bool=False) -> None:
