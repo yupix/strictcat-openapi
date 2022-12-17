@@ -99,12 +99,12 @@ export interface {schema} {json.dumps(schemas[schema], ensure_ascii=False).repla
             if parameters:
                 for param in parameters:
                     after_path = after_path.replace(f'{param["name"]}', f':{param["name"]}').replace('{', '').replace('}', '')
-                content += 'params: ' + json.dumps({i['name']: i['schema']['type'] for i in parameters}, ensure_ascii=False).replace('"', '') + '\n'
+                content += '        params: ' + json.dumps({i['name']: i['schema']['type'] for i in parameters}, ensure_ascii=False).replace('"', '') + '\n'
             request_body = api.get('requestBody')
             if request_body:
                 request_type = Property(request_body['content']['application/json']['schema'], request_body.get('required', False)).parse()
-                if len(request_type[0].keys()) > 0:
-                    content += f'body: ' + json.dumps(request_type[0], ensure_ascii=False).replace('"', '') + '\n'
+                if isinstance(request_type[0], str) or len(request_type[0].keys()) > 0:
+                    content += f'        body: ' + json.dumps(request_type[0], ensure_ascii=False).replace('"', '') + '\n'
             
             responses = api.get('responses')
             if responses:
@@ -113,19 +113,19 @@ export interface {schema} {json.dumps(schemas[schema], ensure_ascii=False).repla
                     if response_code == '201' or '200':
                         if responses[response_code].get('content'):
                             response_type, nullable = Property(responses[response_code]['content']['application/json']['schema']).parse()
-                            content += 'response: ' + json.dumps(response_type, ensure_ascii=False).replace('"', '')
+                            content += '        response: ' + json.dumps(response_type, ensure_ascii=False).replace('"', '')
 
                         else:
-                            content += 'response: any'
-                    else: content += 'response: any'
+                            content += '        response: any'
+                    else: content += '        response: any'
                     break
             else:
-                content += 'response: any'
+                content += '        response: any'
 
         final_content += f'''
 "{after_path}": {{
     {path_method.upper()}: {{
-        {content}
+{content}
     }}
 }}
 '''
