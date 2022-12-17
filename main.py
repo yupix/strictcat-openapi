@@ -90,7 +90,7 @@ with open('./openapi.json', mode='r', encoding='utf-8') as f:
             if schemas.get(schema) is None:
                 schemas[schema] = "any"
                 final_content += f'''
-export type {schema} = any
+export type {schema} = any\n
 '''
             else:
                 final_content += f'''
@@ -139,7 +139,7 @@ export interface {schema} {json.dumps(schemas[schema], ensure_ascii=False).repla
                     break
             else:
                 content += '        response: any'
-        content += json.dumps(_request_content, ensure_ascii=False).replace('"', '') + '\n'
+        content += json.dumps(_request_content, ensure_ascii=False, indent=4).replace('"', '')
 
         final_content += f'''
 "{after_path}": {content}
