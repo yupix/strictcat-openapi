@@ -1,4 +1,5 @@
 import json
+from typing import Union
 
 from type import IOpenAPI
 
@@ -7,6 +8,16 @@ schemas = {}
 
 def parse_ref(ref: str):
     return ref.split('/')[-1]
+
+
+
+def add_or_update(data: dict[str, dict], key: str, add_content: Union[dict, str]):
+    if data.get(key):
+        data[key].update(add_content)
+    else:
+        data[key] = add_content
+    return data
+
 
 
 
@@ -45,7 +56,6 @@ with open('./openapi.json', mode='r', encoding='utf-8') as f:
                     for _property in property['properties']:
                         _property_type, nullable = check_ref(property['properties'][_property])
                         nullable = self.check_nullable(_property in self.property_required)
-                        print(nullable, _property)
                         property_type[_property + nullable] = _property_type if _property_type not in ['array', 'either'] else 'any'
                     return property_type, self.check_nullable(property.get('nullable',False))
                 elif 'items' in property_keys:
@@ -60,7 +70,6 @@ with open('./openapi.json', mode='r', encoding='utf-8') as f:
 
             property_type, nullable = check_ref(self.property)
 
-            print(property_type)
             if property_type in ['either', 'array']:
                 return 'any', nullable
 
@@ -90,22 +99,31 @@ export interface {schema} {json.dumps(schemas[schema], ensure_ascii=False).repla
 
     final_content += 'export type Schema = {resource: {'
     for path in openapi['paths']:
+        _request_content = {}
         for path_method in openapi['paths'][path]:
+            _path_method = path_method.upper()
             api = openapi['paths'][path][path_method]
             
             content = ''
             parameters = api.get('parameters')
             after_path = path
+            _request_content.update({_path_method: {}})
+            _request_content_base = _request_content[_path_method]
             if parameters:
+                
                 for param in parameters:
-                    after_path = after_path.replace(f'{param["name"]}', f':{param["name"]}').replace('{', '').replace('}', '')
-                content += '        params: ' + json.dumps({i['name']: i['schema']['type'] for i in parameters}, ensure_ascii=False).replace('"', '') + '\n'
+                    if param.get('in') == 'path':  # pathじゃないやつはおかしくなる可能性ある
+                        after_path = after_path.replace(f'{param["name"]}', f':{param["name"]}').replace('{', '').replace('}', '')
+                        add_or_update(_request_content_base, 'params', {param['name']: param['schema']['type']})
+                    if param.get('in') == 'query':
+                        add_or_update(_request_content_base, 'query', {param['name']: param['schema']['type']})
+
+
             request_body = api.get('requestBody')
             if request_body:
                 request_type = Property(request_body['content']['application/json']['schema'], request_body.get('required', False)).parse()
                 if isinstance(request_type[0], str) or len(request_type[0].keys()) > 0:
-                    content += f'        body: ' + json.dumps(request_type[0], ensure_ascii=False).replace('"', '') + '\n'
-            
+                    add_or_update(_request_content_base, 'body', request_type[0])
             responses = api.get('responses')
             if responses:
                 
@@ -113,21 +131,18 @@ export interface {schema} {json.dumps(schemas[schema], ensure_ascii=False).repla
                     if response_code == '201' or '200':
                         if responses[response_code].get('content'):
                             response_type, nullable = Property(responses[response_code]['content']['application/json']['schema']).parse()
-                            content += '        response: ' + json.dumps(response_type, ensure_ascii=False).replace('"', '')
+                            add_or_update(_request_content_base, 'response', response_type)
 
                         else:
-                            content += '        response: any'
-                    else: content += '        response: any'
+                            add_or_update(_request_content_base, 'response', 'any')
+                    else: add_or_update(_request_content_base, 'response', 'any')
                     break
             else:
                 content += '        response: any'
+        content += json.dumps(_request_content, ensure_ascii=False).replace('"', '') + '\n'
 
         final_content += f'''
-"{after_path}": {{
-    {path_method.upper()}: {{
-{content}
-    }}
-}}
+"{after_path}": {content}
 '''
 
 with open('./schema.ts', mode='w', encoding='utf-8') as f:
