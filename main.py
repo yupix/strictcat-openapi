@@ -112,11 +112,12 @@ export interface {schema} {json.dumps(schemas[schema], ensure_ascii=False).repla
             if parameters:
                 
                 for param in parameters:
+                    nullable = '?' if param.get('required', True) is False else ''
                     if param.get('in') == 'path':  # pathじゃないやつはおかしくなる可能性ある
-                        after_path = after_path.replace(f'{param["name"]}', f':{param["name"]}').replace('{', '').replace('}', '')
+                        after_path = after_path.replace(f'{param["name"]}{nullable}', f':{param["name"]}').replace('{', '').replace('}', '')
                         add_or_update(_request_content_base, 'params', {param['name']: param['schema']['type']})
                     if param.get('in') == 'query':
-                        add_or_update(_request_content_base, 'query', {param['name']: param['schema']['type']})
+                        add_or_update(_request_content_base, 'query', {f'{param["name"]}{nullable}': param['schema']['type']})
 
 
             request_body = api.get('requestBody')
