@@ -81,14 +81,14 @@ with open('./openapi.json', mode='r', encoding='utf-8') as f:
             if schemas.get(schema) is None:
                 schemas[schema] = "any"
                 final_content += f'''
-type {schema} = any
+export type {schema} = any
 '''
             else:
                 final_content += f'''
-interface {schema} {json.dumps(schemas[schema], ensure_ascii=False).replace('"', '')}
+export interface {schema} {json.dumps(schemas[schema], ensure_ascii=False).replace('"', '')}
 '''
 
-    final_content += 'type Schema = {resource: {'
+    final_content += 'export type Schema = {resource: {'
     for path in openapi['paths']:
         for path_method in openapi['paths'][path]:
             api = openapi['paths'][path][path_method]
