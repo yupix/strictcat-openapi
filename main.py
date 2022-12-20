@@ -1,5 +1,7 @@
+import argparse
 import json
 import os
+from pathlib import Path
 from urllib import request
 from typing import Union
 
@@ -7,7 +9,13 @@ from dotenv import load_dotenv
 
 from type import IOpenAPI
 
-load_dotenv()
+parser = argparse.ArgumentParser() 
+
+parser.add_argument('-e', '--env', required=True)
+
+args = parser.parse_args()
+
+load_dotenv(args.env)
 
 env = os.environ
 

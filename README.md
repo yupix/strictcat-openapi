@@ -18,5 +18,5 @@ mv .env.example .env
 
 # .envの中にある変数にOpenAPIがあるurlを入れてください
 
-python main.py
+python main.py -e ./.env
 ```
