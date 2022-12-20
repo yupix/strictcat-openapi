@@ -9,6 +9,8 @@ from type import IOpenAPI
 
 load_dotenv()
 
+env = os.environ
+
 final_content = ''
 schemas = {}
 
@@ -25,8 +27,9 @@ def add_or_update(data: dict[str, dict], key: str, add_content: Union[dict, str]
     return data
 
 
+use_export = 'export ' if env.get('USE_EXPORT').lower() == 'true' else ''
 
-with request.urlopen(os.environ.get('OPENAPI_URL')) as res:
+with request.urlopen(env.get('OPENAPI_URL')) as res:
     openapi: IOpenAPI = json.loads(res.read())
 
     class Property:
@@ -95,14 +98,14 @@ with request.urlopen(os.environ.get('OPENAPI_URL')) as res:
             if schemas.get(schema) is None:
                 schemas[schema] = "any"
                 final_content += f'''
-export type {schema} = any\n
+{use_export}type {schema} = any\n
 '''
             else:
                 final_content += f'''
-export interface {schema} {json.dumps(schemas[schema], ensure_ascii=False).replace('"', '')}
+{use_export}interface {schema} {json.dumps(schemas[schema], ensure_ascii=False).replace('"', '')}
 '''
 
-    final_content += 'export type Schema = {resource: {'
+    final_content += use_export + 'type Schema = {resource: {'
     for path in openapi['paths']:
         _request_content = {}
         for path_method in openapi['paths'][path]:
