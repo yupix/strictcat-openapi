@@ -162,6 +162,6 @@ with request.urlopen(env.get('OPENAPI_URL')) as res:
 "{after_path}": {content}
 '''
 
-with open('./schema.ts', mode='w', encoding='utf-8') as f:
+with open(env.get('EXPORT_SCHEMA_PATH'), mode='w', encoding='utf-8') as f:
     f.write(f'{final_content}' + '}}')
     f.close()
