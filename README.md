@@ -20,3 +20,14 @@ mv .env.example .env
 
 python main.py -e ./.env
 ```
+
+## 組み込みに使いたい方向けの情報
+
+このプロジェクトを使用する場合の主な用途として、バックエンドとフロントエンドとのAPI通信を円滑にするというものがあると思いますが、そのうえでこのプロジェクトをサブモジュールにするのも1つの手ではありますが、作者の私(yupix)的なお勧めは`pyinstaller`を用いてバイナリを作成し、それをフロントエンド側に用意することです。以下にpyinstallerを用いたバイナリの作成コマンドを載せておきます。
+
+```bash
+pip install pyinstaller
+pyinstaller main.py --onefile --noconsole --clean
+```
+
+出力先はdistの中の`main`または`main.exe`などになると思います
