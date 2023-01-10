@@ -110,7 +110,8 @@ with request(
                 elif 'enum' in property_keys:
                     property_type = ''
                     for enum in property['enum']:
-                        property_type += f"'{enum}' | "
+                        _enum = enum if isinstance(enum, int) else f"'{enum}'"
+                        property_type += f'{_enum} | '
                     return (
                         property_type.rstrip('| '),
                         self.check_nullable(property.get('nullable', False)),
