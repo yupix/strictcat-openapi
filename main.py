@@ -2,10 +2,10 @@ import argparse
 import json
 import os
 from pathlib import Path
-from urllib import request
 from typing import Union
 
 from dotenv import load_dotenv
+from requests import request
 
 from type import IOpenAPI
 
@@ -37,8 +37,15 @@ def add_or_update(data: dict[str, dict], key: str, add_content: Union[dict, str]
 
 use_export = 'export ' if env.get('USE_EXPORT').lower() == 'true' else ''
 
-with request.urlopen(env.get('OPENAPI_URL')) as res:
-    openapi: IOpenAPI = json.loads(res.read())
+print(env.get('OPENAPI_URL'))
+with request(
+    method='get',
+    url=env.get('OPENAPI_URL'),
+    headers={
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.76 Safari/537.36'
+    },
+) as res:
+    openapi: IOpenAPI = res.json()
 
     class Property:
         def __init__(
@@ -103,9 +110,9 @@ with request.urlopen(env.get('OPENAPI_URL')) as res:
                 elif 'enum' in property_keys:
                     property_type = ''
                     for enum in property['enum']:
-                        property_type += f"'{enum}' |"
+                        property_type += f"'{enum}' | "
                     return (
-                        property_type.rstrip('|'),
+                        property_type.rstrip('| '),
                         self.check_nullable(property.get('nullable', False)),
                     )
                 else:
@@ -131,9 +138,9 @@ with request.urlopen(env.get('OPENAPI_URL')) as res:
             ]
             property_type, nullable = Property(property).parse()
             if schemas.get(schema) is None:
-                schemas[schema] = {propertiy_name: property_type}
+                schemas[schema] = {f'{propertiy_name}{nullable}': property_type}
             else:
-                schemas[schema].update({propertiy_name: property_type})
+                schemas[schema].update({f'{propertiy_name}{nullable}': property_type})
         else:
             if schemas.get(schema) is None:
                 schemas[schema] = 'any'
@@ -178,7 +185,11 @@ with request.urlopen(env.get('OPENAPI_URL')) as res:
                         add_or_update(
                             _request_content_base,
                             'query',
-                            {f'{param["name"]}{nullable}': param['schema']['type']},
+                            {
+                                f'{param["name"]}{nullable}': Property(
+                                    param['schema']
+                                ).parse()[0]
+                            },
                         )
 
             request_body = api.get('requestBody')
