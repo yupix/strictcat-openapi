@@ -7,7 +7,7 @@ from typing import Union
 from dotenv import load_dotenv
 from requests import request
 
-from type import IOpenAPI
+from type import IEnv, IOpenAPI
 
 parser = argparse.ArgumentParser()
 
@@ -17,7 +17,8 @@ args = parser.parse_args()
 
 load_dotenv(args.env)
 
-env = os.environ
+
+env: IEnv = os.environ  # type: ignore
 
 final_content = ''
 schemas = {}
@@ -37,7 +38,6 @@ def add_or_update(data: dict[str, dict], key: str, add_content: Union[dict, str]
 
 use_export = 'export ' if env.get('USE_EXPORT').lower() == 'true' else ''
 
-print(env.get('OPENAPI_URL'))
 with request(
     method='get',
     url=env.get('OPENAPI_URL'),
@@ -49,12 +49,16 @@ with request(
 
     class Property:
         def __init__(
-            self, property: dict[str, str], required_inversion: bool = False
+            self,
+            property: dict[str, str],
+            required_inversion: bool = False,
+            is_request: bool = True,
         ) -> None:
             self.property = property
             self.property_type = property.keys()
             self.property_required = property.get('required', [])
             self.required_inversion = required_inversion
+            self.is_request = is_request
 
         def check_nullable(self, nullable: bool):
             if self.required_inversion:
@@ -70,6 +74,12 @@ with request(
                         property_type + '[]' if items else property_type,
                         self.check_nullable(property.get('nullable', False)),
                     )
+                elif (
+                    self.is_request is False
+                    and env.get('USE_DEFAULT_VALUE').lower() == 'true'
+                    and property.get('default')
+                ):
+                    return f"'{property.get('default')}'", self.check_nullable(False)
                 elif items and property.get('items'):
                     if property['items'].get('items'):
                         if 'items' not in property['items']['items']:
@@ -137,7 +147,7 @@ with request(
             property = openapi['components']['schemas'][schema]['properties'][
                 propertiy_name
             ]
-            property_type, nullable = Property(property).parse()
+            property_type, nullable = Property(property, is_request=False).parse()
             if schemas.get(schema) is None:
                 schemas[schema] = {f'{propertiy_name}{nullable}': property_type}
             else:
@@ -210,7 +220,8 @@ with request(
                             response_type, nullable = Property(
                                 responses[response_code]['content']['application/json'][
                                     'schema'
-                                ]
+                                ],
+                                is_request=False,
                             ).parse()
                             add_or_update(
                                 _request_content_base, 'response', response_type
